@@ -515,6 +515,54 @@ class PathPatch3D(Patch3D):
         return min(vzs)
 
 
+class StepPatch3D(Patch3D):
+    """
+    3D StepPatch object.
+    """
+
+    def __init__(self, path, *, zs=(), zdir='z', **kwargs):
+        """
+        Parameters
+        ----------
+        path :
+        zs : float
+            The location along the *zdir* axis in 3D space to position the
+            step patch.
+        zdir : {'x', 'y', 'z', 3-tuple}
+            Plane to plot step patch orthogonal to. Default: 'z'.
+            See `.get_dir_vector` for a description of the values.
+        """
+        # Not super().__init__!
+        Patch.__init__(self, **kwargs)
+        self.set_3d_properties(path, zs, zdir)
+
+    def set_3d_properties(self, path, zs=0, zdir='z'):
+        """
+        Set the *z* position and direction of the step patch.
+
+        Parameters
+        ----------
+        path :
+        zs : float
+            The location along the *zdir* axis in 3D space to position the
+            step patch.
+        zdir : {'x', 'y', 'z', 3-tuple}
+            Plane to plot step patch orthogonal to. Default: 'z'.
+            See `.get_dir_vector` for a description of the values.
+        """
+        Patch3D.set_3d_properties(self, path.vertices, zs=zs, zdir=zdir)
+        self._code3d = path.codes
+
+    def do_3d_projection(self):
+        s = self._segment3d
+        xs, ys, zs = zip(*s)
+        vxs, vys, vzs, vis = proj3d._proj_transform_clip(xs, ys, zs,
+                                                         self.axes.M,
+                                                         self.axes._focal_length)
+        self._path2d = mpath.Path(np.column_stack([vxs, vys]), self._code3d)
+        return min(vzs)
+
+
 def _get_patch_verts(patch):
     """Return a list of vertices for the path of a patch."""
     trans = patch.get_patch_transform()
@@ -538,6 +586,16 @@ def pathpatch_2d_to_3d(pathpatch, z=0, zdir='z'):
     mpath = trans.transform_path(path)
     pathpatch.__class__ = PathPatch3D
     pathpatch.set_3d_properties(mpath, z, zdir)
+
+
+def steppatch_2d_to_3d(steppatch, z=0, zdir='z'):
+    """Convert a `.StepPatch` to a `.StepPatch3D` object."""
+    path = steppatch.get_path()
+    trans = steppatch.get_patch_transform()
+
+    mpath = trans.transform_path(path)
+    steppatch.__class__ = StepPatch3D
+    steppatch.set_3d_properties(mpath, z, zdir)
 
 
 class Patch3DCollection(PatchCollection):

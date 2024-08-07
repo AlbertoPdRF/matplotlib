@@ -2932,6 +2932,55 @@ class Axes3D(Axes):
         return patches
 
     @_preprocess_data()
+    def stairs(self, values, edges=None, zs=0, zdir='z', *args, **kwargs):
+        """
+        Add 2D stairs.
+
+        Parameters
+        ----------
+        values : array-like
+            The step heights.
+        edges : array-like
+            The step positions, with ``len(edges) == len(vals) + 1``,
+            between which the curve takes on vals values.
+        zs : float, default: 0
+            Z coordinate of stairs.
+        zdir : {'x', 'y', 'z'}, default: 'z'
+            When plotting 2D data, the direction to use as z ('x', 'y' or 'z').
+        **kwargs
+            Other keyword arguments are forwarded to
+            `matplotlib.axes.Axes.stairs`.
+
+        Returns
+        -------
+        mpl_toolkits.mplot3d.art3d.StepPatch3D
+        """
+        had_data = self.has_data()
+
+        patch = super().stairs(values, edges, *args, **kwargs)
+
+        verts = art3d._get_patch_verts(patch).tolist()
+        verts_zs = zs
+        art3d.steppatch_2d_to_3d(patch, zs, zdir)
+        if 'alpha' in kwargs:
+            patch.set_alpha(kwargs['alpha'])
+
+        if len(verts) > 0:
+            # the following has to be skipped if verts is empty
+            # NOTE: Bugs could still occur if len(verts) > 0,
+            #       but the "2nd dimension" is empty.
+            xs, ys = zip(*verts)
+        else:
+            xs, ys = [], []
+
+        xs, ys, verts_zs = art3d.juggle_axes(xs, ys, verts_zs, zdir)
+        self.auto_scale_xyz(xs, ys, verts_zs, had_data)
+
+        return patch
+
+    stairs3D = stairs
+
+    @_preprocess_data()
     def bar3d(self, x, y, z, dx, dy, dz, color=None,
               zsort='average', shade=True, lightsource=None, *args, **kwargs):
         """
